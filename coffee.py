@@ -3,7 +3,7 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("varginha_coffee_temps_10y.csv", index_col="Date", parse_dates=True)
+df = pd.read_csv("crops_data/varginha_coffee_temps_10y.csv", index_col="Date", parse_dates=True)
 
 coffee_prices = yf.download(
     "KC=F", start="2015-01-01", end="2025-11-24", auto_adjust=True
@@ -132,9 +132,45 @@ def plot_returns(prices, buy_signals, holding_period):
     return cash, annualized_return
 
 
-extreme_hots, extreme_colds = plot_extremes(df)
-print(extreme_hots)
-print(extreme_colds)
-plot_prices(coffee_prices, extreme_hots, extreme_colds)
-buy_signals = buy_signals(extreme_hots, extreme_colds, coffee_prices)
-cash, annual_returns = plot_returns(coffee_prices, buy_signals, 6)
+# Helper function to get buy signals without plotting (for import)
+def get_coffee_buy_signals():
+    """Calculate coffee buy signals without displaying plots"""
+    extreme_hots = []
+    extreme_colds = []
+    for i in range(len(df)):
+        if df["Max_Temp_C"].iloc[i] > 33 and df.index[i].month in [9, 10]:
+            extreme_hots.append(df.index[i].date())
+        if df["Min_Temp_C"].iloc[i] < 2 and df.index[i].month in [6, 7, 8]:
+            extreme_colds.append(df.index[i].date())
+    
+    extreme_hots = pd.to_datetime(extreme_hots)
+    extreme_colds = pd.to_datetime(extreme_colds)
+    
+    all_dates = pd.to_datetime(list(extreme_hots) + list(extreme_colds))
+    all_dates = all_dates.sort_values()
+    signals = []
+    seen_months = set()
+
+    for date in all_dates:
+        if date not in coffee_prices.index or date.year == 2025:
+            continue
+        month_key = (date.year, date.month)
+        if month_key in seen_months:
+            continue
+        seen_months.add(month_key)
+        signals.append(date)
+    
+    return signals
+
+
+# Module-level variables for import
+coffee_buy_signals = None
+
+# Only run this code when the file is executed directly
+if __name__ == "__main__":
+    extreme_hots, extreme_colds = plot_extremes(df)
+    print(extreme_hots)
+    print(extreme_colds)
+    plot_prices(coffee_prices, extreme_hots, extreme_colds)
+    coffee_buy_signals = buy_signals(extreme_hots, extreme_colds, coffee_prices)
+    cash, annual_returns = plot_returns(coffee_prices, coffee_buy_signals, 6)
