@@ -19,4 +19,6 @@ Crop tend to surge in price when supply gets shocked by environmental factors. W
 
 # Usage
 
+Consult presentation.ipynb for the full rundown of our exploration into this strategy.
+
 cropname_data.py is how we scraped data from NASA's API. cropname.py is how each crop performs using our method. This is applicable for all crops that are sensitive to changes in temperature. Winter Wheat, for example, does not work in this model as it is considered a "zombie corpse" and doesn't die easily.

@@ -3,15 +3,15 @@ import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
 
-coffee_df = pd.read_csv(
-    "crops_data/varginha_coffee_temps_10y.csv", index_col="Date", parse_dates=True
+hogs_df = pd.read_csv(
+    "crops_data/iowa_hog_weather_10y.csv", index_col="Date", parse_dates=True
 )
 
-coffee_prices = yf.download(
-    "KC=F", start="2015-01-01", end="2025-11-24", auto_adjust=True
+hogs_prices = yf.download(
+    "HE=F", start="2015-01-01", end="2025-11-24", auto_adjust=True
 )
-if isinstance(coffee_prices.columns, pd.MultiIndex):
-    coffee_prices.columns = coffee_prices.columns.droplevel(1)
+if isinstance(hogs_prices.columns, pd.MultiIndex):
+    hogs_prices.columns = hogs_prices.columns.droplevel(1)
 
 
 def plot_extremes(df):
@@ -22,7 +22,7 @@ def plot_extremes(df):
     plt.plot(df.index, df["Max_Temp_C"], label="Max Temp")
     plt.plot(df.index, df["Min_Temp_C"], label="Min Temp")
     for i in range(len(df)):
-        if df["Max_Temp_C"].iloc[i] > 33 and df.index[i].month in [9, 10]:
+        if df["Max_Temp_C"].iloc[i] > 35 and df.index[i].month in [13]:
             if not hot_labeled:
                 plt.plot(
                     df.index[i],
@@ -35,7 +35,7 @@ def plot_extremes(df):
             else:
                 plt.plot(df.index[i], df["Max_Temp_C"].iloc[i], "r^", markersize=10)
             extreme_hots.append(df.index[i].date())
-        if df["Min_Temp_C"].iloc[i] < 2 and df.index[i].month in [6, 7, 8]:
+        if df["Min_Temp_C"].iloc[i] < -20 and df.index[i].month in [12, 1, 2, 3]:
             if not cold_labeled:
                 plt.plot(
                     df.index[i],
@@ -48,7 +48,7 @@ def plot_extremes(df):
             else:
                 plt.plot(df.index[i], df["Min_Temp_C"].iloc[i], "b^", markersize=10)
             extreme_colds.append(df.index[i].date())
-    plt.title("Extreme Temperatures During coffee Harvest")
+    plt.title("Extreme Temperatures During hogs Harvest")
     plt.xlabel("Date")
     plt.ylabel("Temperature (°C)")
     plt.legend()
@@ -68,7 +68,7 @@ def plot_prices(prices, extreme_hots, extreme_colds):
             plt.plot(date, prices.loc[date]["Close"], "bo", markersize=10)
         except KeyError:
             continue
-    plt.title("coffee Prices During Extreme Temperatures")
+    plt.title("hogs Prices During Extreme Temperatures")
     plt.xlabel("Date")
     plt.ylabel("Price (USD)")
     plt.show()
@@ -113,7 +113,7 @@ def backtest_strategy(prices, buy_signals, holding_period):
             continue
 
         buy_price = prices.loc[buy_date]["Close"]
-        coffee_shares = cash / buy_price
+        hogs_shares = cash / buy_price
         target_sell_date = buy_date + pd.DateOffset(months=holding_period)
         idx = prices.index.get_indexer([target_sell_date], method="nearest")[0]
         sell_date = prices.index[idx]
@@ -122,9 +122,9 @@ def backtest_strategy(prices, buy_signals, holding_period):
             break
 
         period_prices = prices.loc[buy_date:sell_date]["Close"]
-        portfolio_value.loc[buy_date:sell_date] = coffee_shares * period_prices
+        portfolio_value.loc[buy_date:sell_date] = hogs_shares * period_prices
         sell_price = prices.loc[sell_date]["Close"]
-        cash = coffee_shares * sell_price
+        cash = hogs_shares * sell_price
         portfolio_value.loc[sell_date:] = cash
         busy_until_date = sell_date
 
@@ -151,14 +151,14 @@ def plot_returns(prices, buy_signals, holding_period):
     plt.show()
 
 
-def get_coffee_buy_signals():
+def get_hogs_buy_signals():
     extreme_hots = []
     extreme_colds = []
-    for i in range(len(coffee_df)):
-        if coffee_df["Max_Temp_C"].iloc[i] > 34 and coffee_df.index[i].month in [7, 8]:
-            extreme_hots.append(coffee_df.index[i].date())
-        if coffee_df["Min_Temp_C"].iloc[i] < 0 and coffee_df.index[i].month in [5, 9]:
-            extreme_colds.append(coffee_df.index[i].date())
+    for i in range(len(hogs_df)):
+        if hogs_df["Max_Temp_C"].iloc[i] > 34 and hogs_df.index[i].month in [7, 8]:
+            extreme_hots.append(hogs_df.index[i].date())
+        if hogs_df["Min_Temp_C"].iloc[i] < 0 and hogs_df.index[i].month in [5, 9]:
+            extreme_colds.append(hogs_df.index[i].date())
 
     extreme_hots = pd.to_datetime(extreme_hots)
     extreme_colds = pd.to_datetime(extreme_colds)
@@ -169,7 +169,7 @@ def get_coffee_buy_signals():
     seen_months = set()
 
     for date in all_dates:
-        if date not in coffee_prices.index or date.year == 2025:
+        if date not in hogs_prices.index or date.year == 2025:
             continue
         month_key = (date.year, date.month)
         if month_key in seen_months:
@@ -252,18 +252,18 @@ def plot_optimization_results(cash_results, return_results, best_months):
     plt.show()
 
 
-coffee_buy_signals = None
+hogs_buy_signals = None
 
 
-extreme_hots, extreme_colds = plot_extremes(coffee_df)
-plot_prices(coffee_prices, extreme_hots, extreme_colds)
-coffee_buy_signals = buy_signals(extreme_hots, extreme_colds, coffee_prices)
-print(coffee_buy_signals)
+extreme_hots, extreme_colds = plot_extremes(hogs_df)
+plot_prices(hogs_prices, extreme_hots, extreme_colds)
+hogs_buy_signals = buy_signals(extreme_hots, extreme_colds, hogs_prices)
+print(hogs_buy_signals)
 cash, annualized_return, portfolio_value = backtest_strategy(
-    coffee_prices, coffee_buy_signals, 6
+    hogs_prices, hogs_buy_signals, 6
 )
-plot_returns(coffee_prices, coffee_buy_signals, 6)
+plot_returns(hogs_prices, hogs_buy_signals, 6)
 best_months, best_pnl, cash_results, return_results = optimize_holding_period(
-    coffee_prices, coffee_buy_signals, 1, 12
+    hogs_prices, hogs_buy_signals, 1, 12
 )
 plot_optimization_results(cash_results, return_results, best_months)
