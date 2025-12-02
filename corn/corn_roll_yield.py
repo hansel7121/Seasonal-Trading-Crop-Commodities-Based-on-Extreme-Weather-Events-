@@ -280,9 +280,9 @@ if __name__ == "__main__":
     corn_buy_signals = buy_signals(extreme_hots, extreme_colds, corn_prices)
     print(corn_buy_signals)
     cash, annualized_return, portfolio_value = backtest_strategy(
-        corn_prices, corn_buy_signals, 6
+        corn_prices, corn_buy_signals, 10
     )
-    plot_returns(corn_prices, corn_buy_signals, 3)
+    plot_returns(corn_prices, corn_buy_signals, 10)
     best_months, best_pnl, cash_results, return_results = optimize_holding_period(
         corn_prices, corn_buy_signals, 1, 12
     )
